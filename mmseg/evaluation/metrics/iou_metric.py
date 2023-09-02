@@ -44,7 +44,7 @@ class IoUMetric(BaseMetric):
     """
 
     def __init__(self,
-                 ignore_index: int = 255,
+                 ignore_index: int = 9,
                  iou_metrics: List[str] = ['mIoU'],
                  nan_to_num: Optional[int] = None,
                  beta: int = 1,
@@ -211,7 +211,6 @@ class IoUMetric(BaseMetric):
         Args:
             total_area_intersect (np.ndarray): The intersection of prediction
                 and ground truth histogram on all classes.
-                预测正确的集合
             total_area_union (np.ndarray): The union of prediction and ground
                 truth histogram on all classes.
             total_area_pred_label (np.ndarray): The prediction histogram on
@@ -257,8 +256,20 @@ class IoUMetric(BaseMetric):
             if metric == 'mIoU':
                 iou = total_area_intersect / total_area_union
                 acc = total_area_intersect / total_area_label
+                ##############
+                precision = total_area_intersect / total_area_pred_label
+                recall = total_area_intersect / total_area_label
+                f_value = torch.tensor([
+                    f_score(x[0], x[1], beta) for x in zip(precision, recall)
+                ])
+                ##############
                 ret_metrics['IoU'] = iou
                 ret_metrics['Acc'] = acc
+                ##############
+                ret_metrics['Fscore'] = f_value
+                ret_metrics['Precision'] = precision
+                ret_metrics['Recall'] = recall
+                ##############
             elif metric == 'mDice':
                 dice = 2 * total_area_intersect / (
                     total_area_pred_label + total_area_label)

@@ -1,6 +1,6 @@
 # dataset settings
 dataset_type = 'TaiyuanCityDataset'
-data_root = 'data/Taiyuan_city'
+data_root = 'G:\project\mmsegmentation\data\Taiyuan_city'
 crop_size = (512, 512)
 train_pipeline = [
     dict(type='LoadImageFromFile'),

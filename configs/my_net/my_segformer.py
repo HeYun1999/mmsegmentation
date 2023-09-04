@@ -1,5 +1,5 @@
 _base_ = [
-    '../_base_/models/segformer_mit-b0.py', '../_base_/datasets/taiyuan_city.py',
+    '../_base_/models/my_segformeb0.py', '../_base_/datasets/taiyuan_city.py',
     '../_base_/default_runtime.py', '../_base_/schedules/schedule_160k.py'
 ]
 checkpoint = 'https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b5_20220624-658746d9.pth'

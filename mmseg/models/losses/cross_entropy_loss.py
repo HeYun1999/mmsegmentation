@@ -15,7 +15,8 @@ def cross_entropy(pred,
                   class_weight=None,
                   reduction='mean',
                   avg_factor=None,
-                  ignore_index=-100,
+                  #ignore_index=-100,
+                  ignore_index=9,
                   avg_non_ignore=False):
     """cross_entropy. The wrapper function for :func:`F.cross_entropy`
 

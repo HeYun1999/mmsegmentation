@@ -76,7 +76,8 @@ class Segformer_Syatten_Head(BaseDecodeHead):
         out = self.SELayer(out)
         out = self.decoupling(out)
         out2 = out[0]
-        outs = [out[1],or_input]
+        out = out[0] + out[1]
+        outs = [out,or_input]
         out = torch.cat(outs, dim=1)
         #out = self.ECALayer(out)
         #out = self.Sy_Attention_Model(out)
@@ -104,13 +105,22 @@ class decoupling(nn.Module):
         nn.ReLU(inplace=True),
         nn.Upsample(scale_factor=4)
         )
+        self.conv2_mod = nn.Sequential(
+        nn.Conv2d(1024, 1024, 3, 1, padding=1, bias=False),
+        nn.BatchNorm2d(1024),
+        nn.ReLU(inplace=True)
+        )
 
     def forward(self, x):
 
         out = self.conv1_mod(x)
         out_ed = x - out
         outs=[out,out_ed]
-        return outs
+        out_conv = []
+        for ou in outs:
+            ou = self.conv2_mod(ou)
+            out_conv.append(ou)
+        return out_conv
 
 class FR(nn.Module):
     def __init__(self,c=3,h=128,w=128):

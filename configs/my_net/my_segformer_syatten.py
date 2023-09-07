@@ -10,7 +10,7 @@ model = dict(
     pretrained=checkpoint,
     backbone=dict(
         embed_dims=64, num_heads=[1, 2, 5, 8], num_layers=[3, 6, 40, 3]),
-    decode_head=dict(num_classes=9,in_channels=[64, 128, 320, 512]))
+    decode_head=dict(num_classes=10,in_channels=[64, 128, 320, 512]))
 
 optim_wrapper = dict(
     _delete_=True,

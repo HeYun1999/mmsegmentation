@@ -12,7 +12,7 @@ model = dict(
     data_preprocessor=data_preprocessor,
     pretrained=None,
     backbone=dict(
-        type='MixVisionTransformer',
+        type='My_MixVisionTransformer',
         in_channels=3,
         embed_dims=32,
         num_stages=4,
@@ -36,7 +36,7 @@ model = dict(
         norm_cfg=norm_cfg,
         align_corners=False,
         loss_decode=dict(
-            type='CrossEntropyLoss', use_sigmoid=False, loss_weight=1.0)),
+            type='My_CrossEntropyLoss', use_sigmoid=False, loss_weight=1.0)),
     # model training and testing settings
     train_cfg=dict(),
     test_cfg=dict(mode='whole'))

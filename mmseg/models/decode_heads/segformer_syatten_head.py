@@ -3,7 +3,7 @@ import torch
 import torch.nn as nn
 from mmcv.cnn import ConvModule
 
-from mmseg.models.decode_heads.decode_head import BaseDecodeHead
+from mmseg.models.decode_heads.my_decode_head import BaseDecodeHead
 from mmseg.registry import MODELS
 from ..utils import resize
 
@@ -24,8 +24,8 @@ class Segformer_Syatten_Head(BaseDecodeHead):
         super().__init__(input_transform='multiple_select', **kwargs)
 
         self.interpolate_mode = interpolate_mode
+        #num_inputs = len(self.in_channels)
         num_inputs = len(self.in_channels)
-
         assert num_inputs == len(self.in_index)
 
         self.convs = nn.ModuleList()
@@ -39,17 +39,28 @@ class Segformer_Syatten_Head(BaseDecodeHead):
                     norm_cfg=self.norm_cfg,
                     act_cfg=self.act_cfg))
 
-        self.fusion_conv = ConvModule(
-            in_channels=self.channels * num_inputs,
+        self.fusion_conv1 = ConvModule(
+            in_channels=self.channels * (num_inputs + 1),
+            out_channels=self.channels,
+            kernel_size=1,
+            norm_cfg=self.norm_cfg)
+        self.fusion_conv2 = ConvModule(
+            in_channels=self.channels * (num_inputs),
             out_channels=self.channels,
             kernel_size=1,
             norm_cfg=self.norm_cfg)
 
         self.Sy_Attention_Model = Sy_Attention_Model()
-
+        self.ECALayer = ECALayer()
+        self.SELayer = SELayer(1024)
+        self.decoupling = decoupling()
     def forward(self, inputs):
+        #只选取前四个特征图
+        or_input = inputs[4]
+        inputs = inputs[:4]
+        #第五个为低纬度特征
         # Receive 4 stage backbone feature map: 1/4, 1/8, 1/16, 1/32
-        inputs = self._transform_inputs(inputs)
+        inputs = self._transform_inputs(inputs)#inputs:
         outs = []
         for idx in range(len(inputs)):
             x = inputs[idx]
@@ -61,15 +72,45 @@ class Segformer_Syatten_Head(BaseDecodeHead):
                     mode=self.interpolate_mode,
                     align_corners=self.align_corners))
         out = torch.cat(outs, dim=1)
-        #协同注意力↓
+        #低高维度结合↓
+        out = self.SELayer(out)
+        out = self.decoupling(out)
+        out2 = out[0]
+        outs = [out[1],or_input]
+        out = torch.cat(outs, dim=1)
+        #out = self.ECALayer(out)
+        #out = self.Sy_Attention_Model(out)
+        #低高维度结合↑
+        out1 = self.fusion_conv1(out)
+        out1 = self.cls_seg(out1)
 
-        out = self.Sy_Attention_Model(out)
-        #协同注意力↑
-        out = self.fusion_conv(out)
+        out2 = self.fusion_conv2(out2)
+        out2 = self.cls_seg(out2)
 
-        out = self.cls_seg(out)
+        outs = [out1,out2]
 
-        return out
+        return outs
+
+class decoupling(nn.Module):
+    def __init__(self,c=3,h=128,w=128):
+        super().__init__()
+        self.conv1_mod = nn.Sequential(
+        nn.Conv2d(1024, 512, 3, 2,padding=1, bias=False),
+        nn.BatchNorm2d(512),
+        nn.ReLU(inplace=True),
+        nn.Conv2d(512, 512, 3, 2, padding=1,bias=False),
+        nn.BatchNorm2d(512),
+        nn.Conv2d(512, 1024, 1, 1, bias=False),
+        nn.ReLU(inplace=True),
+        nn.Upsample(scale_factor=4)
+        )
+
+    def forward(self, x):
+
+        out = self.conv1_mod(x)
+        out_ed = x - out
+        outs=[out,out_ed]
+        return outs
 
 class FR(nn.Module):
     def __init__(self,c=3,h=128,w=128):
@@ -120,3 +161,41 @@ class Sy_Attention_Model(nn.Module):
 
 
         return feature_ed
+#SE注意力机制
+class SELayer(nn.Module):
+    def __init__(self, channel, reduction=16):
+        super(SELayer, self).__init__()
+        self.avg_pool = nn.AdaptiveAvgPool2d(1)
+        self.fc = nn.Sequential(
+            nn.Linear(channel, channel // reduction, bias=False),
+            nn.ReLU(inplace=True),
+            nn.Linear(channel // reduction, channel, bias=False),
+            nn.Sigmoid()
+        )
+
+    def forward(self, x):
+        b, c, _, _ = x.size()
+        y = self.avg_pool(x).view(b, c)
+        y = self.fc(y).view(b, c, 1, 1)
+        out = x * y.expand_as(x)
+        return out
+
+#eca注意力机制
+class ECALayer(nn.Module):
+    def __init__(self, k_size=3):
+        super(ECALayer, self).__init__()
+        self.avg_pool = nn.AdaptiveAvgPool2d(1)
+        self.conv = nn.Conv1d(1280, 1280, kernel_size=k_size, padding=(k_size - 1) // 2, bias=False)
+        self.sigmoid = nn.Sigmoid()
+
+    def forward(self, x):
+        # x: input features with shape [b, c, h, w]
+        b, c, h, w = x.size()
+        # feature descriptor on the global spatial information
+        y = self.avg_pool(x)
+        # Two different branches of ECA module
+        y = self.conv(y.squeeze(-1).transpose(-1, -2)).transpose(-1, -2).unsqueeze(-1)
+        # Multi-scale information fusion
+        y = self.sigmoid(y) ## y为每个通道的权重值
+        out = x * y.expand_as(x)  ##将y的通道权重一一赋值给x的对应通道
+        return out

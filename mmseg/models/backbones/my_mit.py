@@ -296,7 +296,7 @@ class TransformerEncoderLayer(BaseModule):
 
 
 @MODELS.register_module()
-class MixVisionTransformer(BaseModule):
+class My_MixVisionTransformer(BaseModule):
     """The backbone of Segformer.
 
     This backbone is the implementation of `SegFormer: Simple and
@@ -418,6 +418,8 @@ class MixVisionTransformer(BaseModule):
             norm = build_norm_layer(norm_cfg, embed_dims_i)[1]
             self.layers.append(ModuleList([patch_embed, layer, norm]))
             cur += num_layer
+        #低维度特征图
+        self.conv = nn.Conv2d(3, 256, 3,4)
 
     def init_weights(self):
         if self.init_cfg is None:
@@ -437,6 +439,10 @@ class MixVisionTransformer(BaseModule):
 
     def forward(self, x):
         outs = []
+        #low_level_feature
+        or_x = x
+        or_x = self.conv(or_x)
+        #low_level_feature
         for i, layer in enumerate(self.layers):
             x, hw_shape = layer[0](x)
             for block in layer[1]:
@@ -445,5 +451,6 @@ class MixVisionTransformer(BaseModule):
             x = nlc_to_nchw(x, hw_shape)
             if i in self.out_indices:
                 outs.append(x)
+        outs.append(or_x)
 
         return outs

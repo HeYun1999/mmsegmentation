@@ -88,7 +88,7 @@ model = dict(
             2,
             1,
         ],
-        type='My_MixVisionTransformer'),
+        type='MixVisionTransformer'),
     data_preprocessor=dict(
         bgr_to_rgb=True,
         mean=[

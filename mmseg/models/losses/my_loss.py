@@ -7,14 +7,8 @@ import torch.nn.functional as F
 
 from mmseg.registry import MODELS
 from .utils import get_class_weight, weight_reduce_loss
+from .lovasz_loss import lovasz_softmax
 
-def redefine(label, non_ignore_index=5):
-    for b in range(label.shape[0]):
-        for i in range(label.shape[1]):
-            for j in range(label.shape[2]):
-                if label[b][i][j] != non_ignore_index:
-                    label[b][i][j] = 9
-    return label
 def cross_entropy(pred,
                   label,
                   weight=None,
@@ -49,25 +43,28 @@ def cross_entropy(pred,
 
     # class_weight is a manual rescaling weight given to each class.
     # If given, has to be a Tensor of size C element-wise losses
-    pred0 = pred[0]
-    pred1 = pred[1]
-    label1=torch.where(label == 5, label, 9)
+    pred_decoupling = pred[0]
+    pred_main = pred[1]
+    #label1=torch.where(label == 5, label, 9)
     #label1 = redefine(label)
     loss1 = F.cross_entropy(
-        pred0,
+        pred_main,
         label,
         weight=class_weight,
         reduction='none',
         ignore_index=ignore_index)
 
+    '''
     loss2 = F.cross_entropy(
-        pred1,
+        pred_decoupling,
         label1,
         weight=class_weight,
         reduction='none',
         ignore_index=ignore_index)
+    '''
+    loss2 = lovasz_softmax(pred_decoupling,label,classes=[5])
 
-    loss = 0.5 * loss1 + 0.5 * loss2
+    loss = 1 * loss1 + 0.4 * loss2
 
     # apply weights and do the reduction
     # average loss over non-ignored elements

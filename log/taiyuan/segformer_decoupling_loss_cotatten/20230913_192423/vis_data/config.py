@@ -110,7 +110,7 @@ model = dict(
         type='SegDataPreProcessor'),
     decode_head=dict(
         align_corners=False,
-        channels=128,
+        channels=256,
         dropout_ratio=0.1,
         in_channels=[
             64,

@@ -39,59 +39,58 @@ class Segformer_Decoupling_Head(BaseDecodeHead):
                     norm_cfg=self.norm_cfg,
                     act_cfg=self.act_cfg))
 
-        self.fusion_conv1 = ConvModule(
-            in_channels=768,
-            out_channels=self.channels,
-            kernel_size=1,
-            norm_cfg=self.norm_cfg)
-        self.fusion_conv2 = ConvModule(
+        self.fusion_conv = ConvModule(
             in_channels=512,
             out_channels=self.channels,
             kernel_size=1,
             norm_cfg=self.norm_cfg)
 
-        #self.Sy_Attention_Model = Sy_Attention_Model()
-        #self.ECALayer = ECALayer(chanel = 1024)
-        self.SELayer = SELayer(1024)
-        self.decoupling = decoupling(in_channels=2048,out_channels=512)
-        #self.CBAM = CBAM(1024)
-        self.CoTAttention = CoTAttention(dim=256, kernel_size=3)
-        self.PyramidPooling = pyramidPooling(1024,[6, 3, 2, 1])
+        self.decoupling = decoupling(in_channels=1280,out_channels=512)
+        self.CoTAttention = nn.ModuleList([
+            CoTAttention(dim=64, kernel_size=3),
+            CoTAttention(dim=128, kernel_size=3),
+            CoTAttention(dim=320, kernel_size=3),
+            CoTAttention(dim=512, kernel_size=3),
+            CoTAttention(dim=256, kernel_size=3)
+            ])
+
+        self.PyramidPooling = pyramidPooling(512,[6, 3, 2, 1])
     def forward(self, inputs):
         #只选取前四个特征图
         or_input = inputs[4]
-        or_input = self.CoTAttention(or_input)
+        or_input = self.CoTAttention[4](or_input)
         inputs = inputs[:4]
-        #第五个为低纬度特征
         # Receive 4 stage backbone feature map: 1/4, 1/8, 1/16, 1/32
         inputs = self._transform_inputs(inputs)#inputs:
+        #inputs.append(or_input)
         outs = []
         for idx in range(len(inputs)):
             x = inputs[idx]
+            x = self.CoTAttention[idx](x)
             conv = self.convs[idx]
             out = resize(
                     input=conv(x),
                     size=inputs[0].shape[2:],
                     mode=self.interpolate_mode,
                     align_corners=self.align_corners)
-            out = self.CoTAttention(out)
             outs.append(out)
         out = torch.cat(outs, dim=1)
         #低高维度结合↓
         out = self.PyramidPooling(out)
-        out = self.decoupling(out)#输出两个张量，out[0]为类别5的特征，out[1]为剩下的特征
+        outs =[out,or_input]
+        out_cat = torch.cat(outs, dim=1)
+        out = self.decoupling(out_cat)#输出两个张量，out[0]为类别5的特征，out[1]为剩下的特征 均为 2，512，256，256
+
         out_decoupling = out[0]
-        out_main = out[0] + out[1]
-        outs = [out_main,or_input]
-        out_cir = torch.cat(outs, dim=1)
-        #out = self.ECALayer(out)
-        #out = self.Sy_Attention_Model(out)
-        #低高维度结合↑
-        out_main = self.fusion_conv1(out_cir)
+        out_main = out[1]
+
+        out_decoupling = self.fusion_conv(out_decoupling)
+        out_decoupling = self.cls_seg(out_decoupling)
+
+        out_main = self.fusion_conv(out_main)
         out_main = self.cls_seg(out_main)
 
-        out_decoupling = self.fusion_conv2(out_decoupling)
-        out_decoupling = self.cls_seg(out_decoupling)
+
 
         outs = [out_decoupling,out_main]
 
@@ -100,32 +99,56 @@ class Segformer_Decoupling_Head(BaseDecodeHead):
 class decoupling(nn.Module):
     def __init__(self,in_channels=2048,out_channels=1024,c=3,h=128,w=128):
         super().__init__()
+        self.conv0_mod = nn.Sequential(
+            nn.Conv2d(in_channels, in_channels // 4, 3, 1, padding=1, bias=False),
+            nn.BatchNorm2d(in_channels // 4),
+            nn.ReLU(inplace=True),
+            #nn.Upsample(scale_factor=2)#维度降格为四分之一，尺寸变为原来的两倍 756 , 256,256
+        )
         self.conv1_mod = nn.Sequential(
-        nn.Conv2d(in_channels, in_channels//4, 3, 2,padding=1, bias=False),
-        nn.BatchNorm2d(in_channels//4),
-        nn.ReLU(inplace=True),
-        nn.Conv2d(in_channels//4, in_channels//4, 3, 2, padding=1,bias=False),
-        nn.BatchNorm2d(in_channels//4),
-        nn.Conv2d(in_channels//4, in_channels, 1, 1, bias=False),
-        nn.ReLU(inplace=True),
-        nn.Upsample(scale_factor=4)
-        )
+
+            nn.Conv2d(in_channels// 4, in_channels//4, 3, 2,padding=1, bias=False),
+            nn.BatchNorm2d(in_channels//4),
+            nn.ReLU(inplace=True),
+            nn.Upsample(scale_factor=2)
+            )
+
         self.conv2_mod = nn.Sequential(
-        nn.Conv2d(in_channels, out_channels, 3, 1, padding=1, bias=False),
-        nn.BatchNorm2d(out_channels),
-        nn.ReLU(inplace=True)
-        )
+            nn.Conv2d(in_channels//4, out_channels, 3, 1, padding=1, bias=False),
+            nn.BatchNorm2d(out_channels),
+            nn.ReLU(inplace=True)
+            )
+        self.conv3_mod = nn.ModuleList([
+            nn.Sequential(
+                nn.Conv2d(in_channels // 4, out_channels, 3, 1, padding=1, bias=False),
+                nn.BatchNorm2d(out_channels),
+                nn.ReLU(inplace=True)
+            ),
+            nn.Sequential(
+                nn.Conv2d(out_channels, out_channels, 3, 1, padding=1, bias=False),
+                nn.BatchNorm2d(out_channels),
+                nn.ReLU(inplace=True)
+            )
+            ])
 
     def forward(self, x):
-
-        out = self.conv1_mod(x)
+        x = self.conv0_mod(x)#2,576,256,256
+        out = self.conv1_mod(x)##尺寸不变，维度不变
         out_ed = x - out
         outs=[out,out_ed]
         out_conv = []
         for ou in outs:
-            ou = self.conv2_mod(ou)
+            ou = self.conv2_mod(ou)#2,512,256,256
             out_conv.append(ou)
-        return out_conv
+        out_cat = out_conv[0] + out_conv[1]
+
+        outs = [out,out_cat]
+        out_conv = []
+        for idx in range(len(outs)):
+            ou = outs[idx]
+            ou = self.conv3_mod[idx](ou)
+            out_conv.append(ou)
+        return out_conv#2,256,256,256
 
 #SE注意力机制
 class SELayer(nn.Module):

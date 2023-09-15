@@ -134,6 +134,7 @@ class decoupling(nn.Module):
     def forward(self, x):
         x = self.conv0_mod(x)#2,576,256,256
         out = self.conv1_mod(x)##尺寸不变，维度不变
+        out = out.detach()
         out_ed = x - out
         outs=[out,out_ed]
         out_conv = []

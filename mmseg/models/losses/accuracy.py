@@ -5,7 +5,7 @@ import torch.nn as nn
 
 def accuracy(pred, target, topk=1, thresh=None, ignore_index=None):
     """Calculate accuracy according to the prediction and target.
-
+     根据预测和目标计算精度
     Args:
         pred (torch.Tensor): The model prediction, shape (N, num_class, ...)
         target (torch.Tensor): The target of each prediction, shape (N, , ...)
@@ -41,7 +41,7 @@ def accuracy(pred, target, topk=1, thresh=None, ignore_index=None):
     pred_value, pred_label = pred.topk(maxk, dim=1)
     # transpose to shape (maxk, N, ...)
     pred_label = pred_label.transpose(0, 1)
-    correct = pred_label.eq(target.unsqueeze(0).expand_as(pred_label))
+    correct = pred_label.eq(target.unsqueeze(0).expand_as(pred_label))#将target，与pred_label的维度保证一致，并且比较没哦个元素的值，一样的话返回true，不同则返回flase
     if thresh is not None:
         # Only prediction values larger than thresh are counted as correct
         correct = correct & (pred_value > thresh).t()

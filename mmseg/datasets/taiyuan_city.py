@@ -23,6 +23,7 @@ class TaiyuanCityDataset(BaseSegDataset):
                  reduce_zero_label=False,
                  **kwargs) -> None:
         super().__init__(
+            ignore_index= 9,#使得图片中标签为9的像素值全部变为255
             img_suffix=img_suffix,
             seg_map_suffix=seg_map_suffix,
             reduce_zero_label=reduce_zero_label,

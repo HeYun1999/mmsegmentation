@@ -62,5 +62,5 @@ val_dataloader = dict(
         pipeline=test_pipeline))
 test_dataloader = val_dataloader
 
-val_evaluator = dict(type='IoUMetric', iou_metrics=['mIoU'])
+val_evaluator = dict(type='IoUMetric', iou_metrics=['mIoU'],ignore_index = 9)
 test_evaluator = val_evaluator

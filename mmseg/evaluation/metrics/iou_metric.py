@@ -44,7 +44,7 @@ class IoUMetric(BaseMetric):
     """
 
     def __init__(self,
-                 ignore_index: int = 9,
+                 ignore_index: int = 255,
                  iou_metrics: List[str] = ['mIoU'],
                  nan_to_num: Optional[int] = None,
                  beta: int = 1,
@@ -183,10 +183,11 @@ class IoUMetric(BaseMetric):
         """
 
         mask = (label != ignore_index)
+        #把预测标签与真实标签，去除ignore_index的部分
         pred_label = pred_label[mask]
         label = label[mask]
 
-        intersect = pred_label[pred_label == label]
+        intersect = pred_label[pred_label == label]#计算交集，
         area_intersect = torch.histc(
             intersect.float(), bins=(num_classes), min=0,
             max=num_classes - 1).cpu()

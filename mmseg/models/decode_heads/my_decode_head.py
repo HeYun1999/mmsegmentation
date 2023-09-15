@@ -278,14 +278,14 @@ class BaseDecodeHead(BaseModule, metaclass=ABCMeta):
         Returns:
             Tensor: Outputs segmentation logits map.
         """
-        seg_logits = self.forward(inputs)
+        seg_logits = self.forward(inputs)#得到前向通道的预测图
 
-        return self.predict_by_feat(seg_logits, batch_img_metas)
-
+        return self.predict_by_feat(seg_logits, batch_img_metas)#将这组输出修改成与输入同大小的格式，再return
     def _stack_batch_gt(self, batch_data_samples: SampleList) -> Tensor:
         gt_semantic_segs = [
             data_sample.gt_sem_seg.data for data_sample in batch_data_samples
-        ]
+        ]#将batch_size个图片数据取出来制成列表
+        #↓将batch_size个图片数据取出来制成列表，进行拼接，从两个（512，512）变成（b，512，512），再return
         return torch.stack(gt_semantic_segs, dim=0)
 
     def loss_by_feat(self, seg_logits: Tensor,
@@ -302,9 +302,14 @@ class BaseDecodeHead(BaseModule, metaclass=ABCMeta):
             dict[str, Tensor]: a dictionary of loss components
         """
 
-        seg_label = self._stack_batch_gt(batch_data_samples)
+        seg_label = self._stack_batch_gt(batch_data_samples)#seg_label为batch——size个真实标签拼成的tensor
+        '''
+        if 'Taiyuan' in batch_data_samples[0].img_path:
+            seg_label = torch.where(seg_label != 9, seg_label, 255)
+        '''
         loss = dict()
         seg_lo = []
+        #把预测图修改成，与标签同大小，确保预测与标签数据同大小
         if isinstance(seg_logits,list):
             for seg_logit in seg_logits:
                 seg_logit = resize(
@@ -324,10 +329,11 @@ class BaseDecodeHead(BaseModule, metaclass=ABCMeta):
             seg_weight = self.sampler.sample(seg_logits, seg_label)
         else:
             seg_weight = None
+        #消减维度（2，1，512，512） -》 （2，512，512）
         seg_label = seg_label.squeeze(1)
-
+        #判断loss损失函数是否为多个还是一个，一个则直接进入，多个的话，用for循环进行多次loss计算
         if not isinstance(self.loss_decode, nn.ModuleList):
-            losses_decode = [self.loss_decode]
+            losses_decode = [self.loss_decode]#如果只有一个loss，则制成列表，因为列表可以进入下面的循环中
         else:
             losses_decode = self.loss_decode
         for loss_decode in losses_decode:
@@ -343,7 +349,7 @@ class BaseDecodeHead(BaseModule, metaclass=ABCMeta):
                     seg_label,
                     weight=seg_weight,
                     ignore_index=self.ignore_index)
-        seg_logits = seg_logits[0]
+        seg_logits = seg_logits[1]#需要计算指标的预测图
         loss['acc_seg'] = accuracy(
             seg_logits, seg_label, ignore_index=self.ignore_index)
         return loss

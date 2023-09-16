@@ -64,7 +64,7 @@ class Segformer_Syatten_Head(BaseDecodeHead):
         out = torch.cat(outs, dim=1)
         #注意力↓
         #out = self.SELayer(out)
-        out = self.Sy_Attention_Model(out)
+        #out = self.Sy_Attention_Model(out)
         #注意力↑
         out = self.fusion_conv(out)
 

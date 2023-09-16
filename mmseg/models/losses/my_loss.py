@@ -44,28 +44,29 @@ def cross_entropy(pred,
     # class_weight is a manual rescaling weight given to each class.
     # If given, has to be a Tensor of size C element-wise losses
     #print(pred)
-    pred_decoupling = pred[0]
-    pred_main = pred[1]
-    #label_decoupling=torch.where(label == 5,label, 9)
-    #print(label_decoupling)
-    #label1 = redefine(label)
-    loss = F.cross_entropy(
-        pred_main,
-        label,
-        weight=class_weight,
-        reduction='none',
-        ignore_index=ignore_index)
+    if isinstance(pred, list):
+        pred_decoupling = pred[0]
+        pred_main = pred[1]
+        #label_decoupling=torch.where(label == 5,label, 9)
+        #print(label_decoupling)
+        #label1 = redefine(label)
+        loss = F.cross_entropy(
+            pred_main,
+            label,
+            weight=class_weight,
+            reduction='none',
+            ignore_index=ignore_index)
 
 
-    '''loss2 = F.cross_entropy(
-        pred_decoupling,
-        label,
-        weight=class_weight,
-        reduction='none',
-        ignore_index=ignore_index)
-    '''
-    pred_decoupling = F.softmax(pred_decoupling, dim=1)
-    loss2 = lovasz_softmax(pred_decoupling,label,classes=[5])
+        pred_decoupling = F.softmax(pred_decoupling, dim=1)
+        loss2 = lovasz_softmax(pred_decoupling,label,classes=[5])
+    else:
+        loss = F.cross_entropy(
+            pred,
+            label,
+            weight=class_weight,
+            reduction='none',
+            ignore_index=ignore_index)
 
     #loss = 2* loss1 + 0 * loss2
 
@@ -79,7 +80,8 @@ def cross_entropy(pred,
         weight = weight.float()
     loss = weight_reduce_loss(
         loss, weight=weight, reduction=reduction, avg_factor=avg_factor)
-    loss = 2 * loss + 0.2 * loss2
+    if isinstance(pred, list):
+        loss = 2 * loss + 0.2 * loss2
     return loss
 
 

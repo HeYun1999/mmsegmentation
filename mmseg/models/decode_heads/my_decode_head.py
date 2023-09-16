@@ -349,7 +349,8 @@ class BaseDecodeHead(BaseModule, metaclass=ABCMeta):
                     seg_label,
                     weight=seg_weight,
                     ignore_index=self.ignore_index)
-        seg_logits = seg_logits[1]#需要计算指标的预测图
+        if isinstance(seg_logits, list):
+            seg_logits = seg_logits[1]  # 需要计算指标的预测图
         loss['acc_seg'] = accuracy(
             seg_logits, seg_label, ignore_index=self.ignore_index)
         return loss

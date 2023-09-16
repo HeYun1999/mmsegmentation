@@ -27,6 +27,16 @@ class Segformer_Decoupling_Head(BaseDecodeHead):
         #num_inputs = len(self.in_channels)
         num_inputs = len(self.in_channels)
         assert num_inputs == len(self.in_index)
+        #低维度特征图
+        self.conv_or = nn.Sequential(
+            nn.Conv2d(3, 128, 3,2,1),
+            nn.BatchNorm2d(128),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(128, 256, 3, 2,1),
+            nn.BatchNorm2d(256),
+            nn.ReLU(inplace=True)
+        )
+
 
         self.convs = nn.ModuleList()
         for i in range(num_inputs):
@@ -45,7 +55,7 @@ class Segformer_Decoupling_Head(BaseDecodeHead):
             kernel_size=1,
             norm_cfg=self.norm_cfg)
 
-        self.decoupling = decoupling(in_channels=1280,out_channels=512)
+        self.decoupling = decoupling(in_channels=2304,out_channels=512)
         self.CoTAttention = nn.ModuleList([
             CoTAttention(dim=64, kernel_size=3),
             CoTAttention(dim=128, kernel_size=3),
@@ -54,15 +64,16 @@ class Segformer_Decoupling_Head(BaseDecodeHead):
             CoTAttention(dim=256, kernel_size=3)
             ])
 
-        self.PyramidPooling = pyramidPooling(512,[6, 3, 2, 1])
+        self.PyramidPooling = pyramidPooling(1024,[6, 3, 2, 1])
         self.fusion_conv1 = ConvModule(
-            in_channels=1280,
+            in_channels=2304,
             out_channels=self.channels,
             kernel_size=1,
             norm_cfg=self.norm_cfg)
     def forward(self, inputs):
         #只选取前四个特征图
         or_input = inputs[4]
+        or_input = self.conv_or(or_input)
         or_input = self.CoTAttention[4](or_input)
         inputs = inputs[:4]
         # Receive 4 stage backbone feature map: 1/4, 1/8, 1/16, 1/32
@@ -83,30 +94,32 @@ class Segformer_Decoupling_Head(BaseDecodeHead):
         out = self.PyramidPooling(out)
         outs =[out,or_input]
         out_cat = torch.cat(outs, dim=1)
+        decoupling_value = True
+        #decoupling_value = False
+        if decoupling_value:
+            out = self.decoupling(out_cat)#输出两个张量，out[0]为类别5的特征，out[1]为剩下的特征 均为 2，512，256，256
 
-        out = self.decoupling(out_cat)#输出两个张量，out[0]为类别5的特征，out[1]为剩下的特征 均为 2，512，256，256
+            out_decoupling = out[0]
+            out_main = out[1]
 
-        out_decoupling = out[0]
-        out_main = out[1]
+            out_decoupling = self.fusion_conv(out_decoupling)
+            out_decoupling = self.cls_seg(out_decoupling)
 
-        out_decoupling = self.fusion_conv(out_decoupling)
-        out_decoupling = self.cls_seg(out_decoupling)
-
-        out_main = self.fusion_conv(out_main)
-        out_main = self.cls_seg(out_main)
+            out_main = self.fusion_conv(out_main)
+            out_main = self.cls_seg(out_main)
 
 
 
-        outs = [out_decoupling,out_main]
+            outs = [out_decoupling,out_main]
+        else:
 
-        '''
-        out = self.fusion_conv1(out_cat)
-        outs = self.cls_seg(out)
-        '''
+            out = self.fusion_conv1(out_cat)
+            outs = self.cls_seg(out)
+
         return outs
 
 class decoupling(nn.Module):
-    def __init__(self,in_channels=2048,out_channels=1024,c=3,h=128,w=128):
+    def __init__(self,in_channels=2304,out_channels=1024,c=3,h=128,w=128):
         super().__init__()
         self.conv0_mod = nn.Sequential(
             nn.Conv2d(in_channels, in_channels // 4, 3, 1, padding=1, bias=False),
@@ -142,8 +155,9 @@ class decoupling(nn.Module):
 
     def forward(self, x):
         x = self.conv0_mod(x)#2,576,256,256
+        #x = x.detach()
         out = self.conv1_mod(x)##尺寸不变，维度不变
-        #out = out.detach()
+        out = torch.mul(x,out)
         out_ed = x - out
         outs=[out,out_ed]
         out_conv = []

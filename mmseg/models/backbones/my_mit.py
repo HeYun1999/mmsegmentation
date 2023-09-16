@@ -418,15 +418,7 @@ class My_MixVisionTransformer(BaseModule):
             norm = build_norm_layer(norm_cfg, embed_dims_i)[1]
             self.layers.append(ModuleList([patch_embed, layer, norm]))
             cur += num_layer
-        #低维度特征图
-        self.conv = nn.Sequential(
-            nn.Conv2d(3, 128, 3,2,1),
-            nn.BatchNorm2d(128),
-            nn.ReLU(inplace=True),
-            nn.Conv2d(128, 256, 3, 2,1),
-            nn.BatchNorm2d(256),
-            nn.ReLU(inplace=True)
-        )
+
 
     def init_weights(self):
         if self.init_cfg is None:
@@ -448,7 +440,6 @@ class My_MixVisionTransformer(BaseModule):
         outs = []
         #low_level_feature
         or_x = x
-        or_x = self.conv(or_x)
         #low_level_feature
         for i, layer in enumerate(self.layers):
             x, hw_shape = layer[0](x)

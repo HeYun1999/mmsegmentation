@@ -50,18 +50,18 @@ class Segformer_Decoupling_Head(BaseDecodeHead):
                     act_cfg=self.act_cfg))
 
         self.fusion_conv_decoupling = ConvModule(
-            in_channels=576,
+            in_channels=256,
             out_channels=self.channels,
             kernel_size=1,
             norm_cfg=self.norm_cfg)
 
         self.fusion_conv_main = ConvModule(
-            in_channels=768,
+            in_channels=576,
             out_channels=self.channels,
             kernel_size=1,
             norm_cfg=self.norm_cfg)
 
-        self.decoupling = decoupling(in_channels=2304,out_channels=512)
+        self.decoupling = decoupling(in_channels=1024,out_channels=512)
         self.CoTAttention = nn.ModuleList([
             CoTAttention(dim=64, kernel_size=3),
             CoTAttention(dim=128, kernel_size=3),
@@ -72,7 +72,7 @@ class Segformer_Decoupling_Head(BaseDecodeHead):
 
         self.PyramidPooling = pyramidPooling(1024,[6, 3, 2, 1])
         self.fusion_conv1 = ConvModule(
-            in_channels=2112,
+            in_channels=1024,
             out_channels=self.channels,
             kernel_size=1,
             norm_cfg=self.norm_cfg)
@@ -83,7 +83,7 @@ class Segformer_Decoupling_Head(BaseDecodeHead):
         or_input = []
         for idx in range(len(inputs)):
             x = inputs[idx]
-            x = self.CoTAttention[idx](x)
+            #x = self.CoTAttention[idx](x)
             or_input.append(x)
             conv = self.convs[idx]
             out = resize(
@@ -95,13 +95,13 @@ class Segformer_Decoupling_Head(BaseDecodeHead):
         or_input = or_input[0]
         out = torch.cat(outs, dim=1)
         #低高维度结合↓
-        out = self.PyramidPooling(out)
-        outs =[out,or_input]
-        out_cat = torch.cat(outs, dim=1)
+        #out = self.PyramidPooling(out)
+        #outs =[out,or_input]
+        #out_cat = torch.cat(outs, dim=1)
         #decoupling_value = True
         decoupling_value = False
         if decoupling_value:
-            out = self.decoupling(out_cat)#输出两个张量，out[0]为类别5的特征，out[1]为剩下的特征 均为 2，512，256，256
+            out = self.decoupling(out)#输出两个张量，out[0]为类别5的特征，out[1]为剩下的特征 均为 2，512，256，256
 
             out_decoupling = out[0]
             out_main = out[1]
@@ -118,7 +118,7 @@ class Segformer_Decoupling_Head(BaseDecodeHead):
             outs = [out_decoupling,out_main]
         else:
 
-            out = self.fusion_conv1(out_cat)
+            out = self.fusion_conv1(out)
             outs = self.cls_seg(out)
 
         return outs

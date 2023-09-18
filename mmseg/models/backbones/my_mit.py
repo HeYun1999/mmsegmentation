@@ -438,9 +438,6 @@ class My_MixVisionTransformer(BaseModule):
 
     def forward(self, x):
         outs = []
-        #low_level_feature
-        or_x = x
-        #low_level_feature
         for i, layer in enumerate(self.layers):
             x, hw_shape = layer[0](x)
             for block in layer[1]:
@@ -449,6 +446,6 @@ class My_MixVisionTransformer(BaseModule):
             x = nlc_to_nchw(x, hw_shape)
             if i in self.out_indices:
                 outs.append(x)
-        outs.append(or_x)
+        #outs.append(or_x)
 
         return outs

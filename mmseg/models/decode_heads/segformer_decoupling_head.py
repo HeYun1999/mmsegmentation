@@ -72,22 +72,19 @@ class Segformer_Decoupling_Head(BaseDecodeHead):
 
         self.PyramidPooling = pyramidPooling(1024,[6, 3, 2, 1])
         self.fusion_conv1 = ConvModule(
-            in_channels=2304,
+            in_channels=2112,
             out_channels=self.channels,
             kernel_size=1,
             norm_cfg=self.norm_cfg)
     def forward(self, inputs):
-        #只选取前四个特征图
-        or_input = inputs[4]
-        or_input = self.conv_or(or_input)
-        or_input = self.CoTAttention[4](or_input)
-        inputs = inputs[:4]
         # Receive 4 stage backbone feature map: 1/4, 1/8, 1/16, 1/32
         inputs = self._transform_inputs(inputs)#inputs:
         outs = []
+        or_input = []
         for idx in range(len(inputs)):
             x = inputs[idx]
             x = self.CoTAttention[idx](x)
+            or_input.append(x)
             conv = self.convs[idx]
             out = resize(
                     input=conv(x),
@@ -95,13 +92,14 @@ class Segformer_Decoupling_Head(BaseDecodeHead):
                     mode=self.interpolate_mode,
                     align_corners=self.align_corners)
             outs.append(out)
+        or_input = or_input[0]
         out = torch.cat(outs, dim=1)
         #低高维度结合↓
         out = self.PyramidPooling(out)
         outs =[out,or_input]
         out_cat = torch.cat(outs, dim=1)
-        decoupling_value = True
-        #decoupling_value = False
+        #decoupling_value = True
+        decoupling_value = False
         if decoupling_value:
             out = self.decoupling(out_cat)#输出两个张量，out[0]为类别5的特征，out[1]为剩下的特征 均为 2，512，256，256
 

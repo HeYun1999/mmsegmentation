@@ -7,7 +7,7 @@ import torch.nn.functional as F
 
 from mmseg.registry import MODELS
 from .utils import get_class_weight, weight_reduce_loss
-from .lovasz_loss import lovasz_softmax
+from .my_lovasz_loss import lovasz_softmax,My_LovaszLoss
 
 def cross_entropy(pred,
                   label,
@@ -57,9 +57,10 @@ def cross_entropy(pred,
             reduction='none',
             ignore_index=ignore_index)
 
-
-        pred_decoupling = F.softmax(pred_decoupling, dim=1)
-        loss2 = lovasz_softmax(pred_decoupling,label,classes=[5])
+        lovaszloss = My_LovaszLoss(reduction = 'none',classes= [5])
+        #pred_decoupling = F.softmax(pred_decoupling, dim=1)
+        loss2 = lovaszloss(pred_decoupling,label)
+        #loss2 = lovasz_softmax(pred_decoupling,label,classes=[5])
     else:
         loss = F.cross_entropy(
             pred,

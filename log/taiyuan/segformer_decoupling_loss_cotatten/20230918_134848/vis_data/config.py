@@ -184,7 +184,7 @@ test_dataloader = dict(
     persistent_workers=True,
     sampler=dict(shuffle=False, type='DefaultSampler'))
 test_evaluator = dict(
-    iou_metrics=[
+    ignore_index=9, iou_metrics=[
         'mIoU',
     ], type='IoUMetric')
 test_pipeline = [
@@ -196,7 +196,7 @@ test_pipeline = [
     dict(reduce_zero_label=False, type='LoadAnnotations'),
     dict(type='PackSegInputs'),
 ]
-train_cfg = dict(max_iters=80000, type='IterBasedTrainLoop', val_interval=50)
+train_cfg = dict(max_iters=80000, type='IterBasedTrainLoop', val_interval=2000)
 train_dataloader = dict(
     batch_size=2,
     dataset=dict(
@@ -298,7 +298,7 @@ val_dataloader = dict(
     persistent_workers=True,
     sampler=dict(shuffle=False, type='DefaultSampler'))
 val_evaluator = dict(
-    iou_metrics=[
+    ignore_index=9, iou_metrics=[
         'mIoU',
     ], type='IoUMetric')
 vis_backends = [

@@ -49,8 +49,14 @@ class Segformer_Decoupling_Head(BaseDecodeHead):
                     norm_cfg=self.norm_cfg,
                     act_cfg=self.act_cfg))
 
-        self.fusion_conv = ConvModule(
-            in_channels=512,
+        self.fusion_conv_decoupling = ConvModule(
+            in_channels=576,
+            out_channels=self.channels,
+            kernel_size=1,
+            norm_cfg=self.norm_cfg)
+
+        self.fusion_conv_main = ConvModule(
+            in_channels=768,
             out_channels=self.channels,
             kernel_size=1,
             norm_cfg=self.norm_cfg)
@@ -101,11 +107,12 @@ class Segformer_Decoupling_Head(BaseDecodeHead):
 
             out_decoupling = out[0]
             out_main = out[1]
-
-            out_decoupling = self.fusion_conv(out_decoupling)
+            outs= [out_main,or_input]
+            out_main = torch.cat(outs, dim=1)
+            out_decoupling = self.fusion_conv_decoupling(out_decoupling)
             out_decoupling = self.cls_seg(out_decoupling)
 
-            out_main = self.fusion_conv(out_main)
+            out_main = self.fusion_conv_main(out_main)
             out_main = self.cls_seg(out_main)
 
 
@@ -154,27 +161,22 @@ class decoupling(nn.Module):
             ])
 
     def forward(self, x):
-        x = self.conv0_mod(x)#2,576,256,256
+        x = self.conv0_mod(x)#2,576,128,128
         #x = x.detach()
         out = self.conv1_mod(x)##尺寸不变，维度不变
-        out = torch.mul(x,out)
+        #out = torch.mul(x,out)
         out_ed = x - out
         outs=[out,out_ed]
         out_conv = []
         for ou in outs:
             ou = self.conv2_mod(ou)#2,512,256,256
             out_conv.append(ou)
-        out_cat = out_conv[0] + out_conv[1]
+        out_add = out_conv[0] + out_conv[1]
 
-        outs = [out,out_cat]
-        out_conv = []
-        for idx in range(len(outs)):
-            ou = outs[idx]
-            ou = self.conv3_mod[idx](ou)
-            out_conv.append(ou)
-        return out_conv#2,256,256,256
+        outs = [out,out_add]
+        return outs#2,256,256,256
 
-#SE注意力机制
+#通道分类机制
 class SELayer(nn.Module):
     def __init__(self, channel, reduction=16):
         super(SELayer, self).__init__()

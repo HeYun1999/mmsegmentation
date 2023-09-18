@@ -22,8 +22,8 @@ data_preprocessor = dict(
         57.375,
     ],
     type='SegDataPreProcessor')
-data_root = 'G:\\project\\mmsegmentation\\data\\Taiyuan_city'
-dataset_type = 'TaiyuanCityDataset'
+data_root = 'G:/project/mmsegmentation/data/vaihingen'
+dataset_type = 'ISPRSDataset'
 default_hooks = dict(
     checkpoint=dict(by_epoch=False, interval=8000, type='CheckpointHook'),
     logger=dict(interval=50, log_metric_by_epoch=False, type='LoggerHook'),
@@ -131,7 +131,7 @@ model = dict(
         loss_decode=dict(
             loss_weight=1.0, type='My_CrossEntropyLoss', use_sigmoid=False),
         norm_cfg=dict(requires_grad=True, type='SyncBN'),
-        num_classes=10,
+        num_classes=6,
         type='Segformer_Decoupling_Head'),
     pretrained=None,
     test_cfg=dict(mode='whole'),
@@ -169,17 +169,17 @@ test_dataloader = dict(
     batch_size=1,
     dataset=dict(
         data_prefix=dict(img_path='img_dir/val', seg_map_path='ann_dir/val'),
-        data_root='G:\\project\\mmsegmentation\\data\\Taiyuan_city',
+        data_root='G:/project/mmsegmentation/data/vaihingen',
         pipeline=[
             dict(type='LoadImageFromFile'),
             dict(keep_ratio=True, scale=(
                 512,
                 512,
             ), type='Resize'),
-            dict(reduce_zero_label=False, type='LoadAnnotations'),
+            dict(reduce_zero_label=True, type='LoadAnnotations'),
             dict(type='PackSegInputs'),
         ],
-        type='TaiyuanCityDataset'),
+        type='ISPRSDataset'),
     num_workers=4,
     persistent_workers=True,
     sampler=dict(shuffle=False, type='DefaultSampler'))
@@ -193,19 +193,19 @@ test_pipeline = [
         512,
         512,
     ), type='Resize'),
-    dict(reduce_zero_label=False, type='LoadAnnotations'),
+    dict(reduce_zero_label=True, type='LoadAnnotations'),
     dict(type='PackSegInputs'),
 ]
-train_cfg = dict(max_iters=80000, type='IterBasedTrainLoop', val_interval=50)
+train_cfg = dict(max_iters=80000, type='IterBasedTrainLoop', val_interval=2000)
 train_dataloader = dict(
     batch_size=2,
     dataset=dict(
         data_prefix=dict(
             img_path='img_dir/train', seg_map_path='ann_dir/train'),
-        data_root='G:\\project\\mmsegmentation\\data\\Taiyuan_city',
+        data_root='G:/project/mmsegmentation/data/vaihingen',
         pipeline=[
             dict(type='LoadImageFromFile'),
-            dict(reduce_zero_label=False, type='LoadAnnotations'),
+            dict(reduce_zero_label=True, type='LoadAnnotations'),
             dict(
                 keep_ratio=True,
                 ratio_range=(
@@ -226,13 +226,13 @@ train_dataloader = dict(
             dict(type='PhotoMetricDistortion'),
             dict(type='PackSegInputs'),
         ],
-        type='TaiyuanCityDataset'),
+        type='ISPRSDataset'),
     num_workers=2,
     persistent_workers=True,
     sampler=dict(shuffle=True, type='InfiniteSampler'))
 train_pipeline = [
     dict(type='LoadImageFromFile'),
-    dict(reduce_zero_label=False, type='LoadAnnotations'),
+    dict(reduce_zero_label=True, type='LoadAnnotations'),
     dict(
         keep_ratio=True,
         ratio_range=(
@@ -283,17 +283,17 @@ val_dataloader = dict(
     batch_size=1,
     dataset=dict(
         data_prefix=dict(img_path='img_dir/val', seg_map_path='ann_dir/val'),
-        data_root='G:\\project\\mmsegmentation\\data\\Taiyuan_city',
+        data_root='G:/project/mmsegmentation/data/vaihingen',
         pipeline=[
             dict(type='LoadImageFromFile'),
             dict(keep_ratio=True, scale=(
                 512,
                 512,
             ), type='Resize'),
-            dict(reduce_zero_label=False, type='LoadAnnotations'),
+            dict(reduce_zero_label=True, type='LoadAnnotations'),
             dict(type='PackSegInputs'),
         ],
-        type='TaiyuanCityDataset'),
+        type='ISPRSDataset'),
     num_workers=4,
     persistent_workers=True,
     sampler=dict(shuffle=False, type='DefaultSampler'))
@@ -310,4 +310,4 @@ visualizer = dict(
     vis_backends=[
         dict(type='LocalVisBackend'),
     ])
-work_dir = '../log/taiyuan/segformer_decoupling_loss_cotatten'
+work_dir = './logvaihingen/segformer_no_decoupling'

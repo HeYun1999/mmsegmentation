@@ -7,6 +7,31 @@ import torch.nn.functional as F
 
 from mmseg.registry import MODELS
 from .utils import get_class_weight, weight_reduce_loss
+import torch.nn.functional as F
+
+
+#只计算标签为5的loss
+import torch
+import torch.nn as nn
+
+def process_label(original_labels):
+    # 预处理标签，将相邻像素值相同的位置设置为-1
+    processed_labels = original_labels.clone()  # 创建预处理后的标签副本
+    processed_labels = processed_labels.unsqueeze(1).cpu()
+    original_labels_clone = processed_labels
+    # 使用卷积操作检查相邻像素
+    conv = nn.Conv2d(1, 1, kernel_size=3, padding=1, bias=False)
+    conv.weight.data = torch.tensor([[[[1, 1, 1], [1, -8, 1], [1, 1, 1]]]], dtype=torch.float32)
+    # 将标签转换为张量
+    labels_tensor = processed_labels.float()
+    # 应用卷积操作
+    processed_labels = conv(labels_tensor)
+
+    # 将相同的位置设置为-1
+    original_labels_clone = torch.where(processed_labels == 0, 255, original_labels_clone)
+    original_labels_clone = original_labels_clone.squeeze(1).to(torch.int64).cuda()
+    return original_labels_clone
+
 
 def cross_entropy(pred,
                   label,
@@ -41,12 +66,37 @@ def cross_entropy(pred,
 
     # class_weight is a manual rescaling weight given to each class.
     # If given, has to be a Tensor of size C element-wise losses
-    loss = F.cross_entropy(
-        pred,
-        label,
-        weight=class_weight,
-        reduction='none',
-        ignore_index=ignore_index)
+    if isinstance(pred,list):
+
+        pred_decouping = pred[0]
+        pred_main = pred[1]
+
+
+        label_decouping = process_label(label)
+        label_main = label
+
+        loss1 = F.cross_entropy(
+            pred_decouping,
+            label_decouping,
+            weight=class_weight,
+            reduction='none',
+            ignore_index=ignore_index)
+
+        loss2 = F.cross_entropy(
+            pred_main,
+            label_main,
+            weight=class_weight,
+            reduction='none',
+            ignore_index=ignore_index)
+        loss = 0.2*loss1 + 0.8*loss2
+
+    else:
+        loss = F.cross_entropy(
+            pred,
+            label,
+            weight=class_weight,
+            reduction='none',
+            ignore_index=ignore_index)
 
 
     # apply weights and do the reduction
@@ -194,7 +244,7 @@ def mask_cross_entropy(pred,
 
 
 @MODELS.register_module()
-class CrossEntropyLoss(nn.Module):
+class CrossEntropyLossV1(nn.Module):
     """CrossEntropyLoss.
 
     Args:

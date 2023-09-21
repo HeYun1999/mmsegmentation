@@ -1,5 +1,5 @@
 # model settings
-norm_cfg = dict(type='SyncBN', requires_grad=True)
+norm_cfg = dict(type='BN', requires_grad=True)
 data_preprocessor = dict(
     type='SegDataPreProcessor',
     mean=[123.675, 116.28, 103.53],
@@ -36,7 +36,7 @@ model = dict(
         norm_cfg=norm_cfg,
         align_corners=False,
         loss_decode=dict(
-            type='CrossEntropyLoss', use_sigmoid=False, loss_weight=1.0)),
+            type='CrossEntropyLossV1', use_sigmoid=False, loss_weight=1.0)),
     # model training and testing settings
     train_cfg=dict(),
     test_cfg=dict(mode='whole'))

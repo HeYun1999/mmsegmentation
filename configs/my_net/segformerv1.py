@@ -1,5 +1,5 @@
 _base_ = [
-    '../_base_/models/segformerv1.py', '../_base_/datasets/vaihingen.py',
+    '../_base_/models/segformerv1.py', '../_base_/datasets/Taiyuan_city.py',
     '../_base_/default_runtime.py', '../_base_/schedules/schedule_80k.py'
 ]
 crop_size = (512, 512)
@@ -13,7 +13,7 @@ model = dict(
         num_heads=[1, 2, 5, 8],
         num_layers=[3, 6, 40, 3],
     ),
-    decode_head=dict(num_classes=6,
+    decode_head=dict(num_classes=10,
                      in_channels=[64, 128, 320, 512]
                      ))
 

@@ -62,7 +62,7 @@ class SegformerHeadV1(BaseDecodeHead):
         for idx in range(len(inputs)):
             x = inputs[idx]
             or_inputs.append(x)
-            x = self.SGE(x)
+            #x = self.SGE(x)
             conv = self.convs[idx]
             outs.append(
                 resize(

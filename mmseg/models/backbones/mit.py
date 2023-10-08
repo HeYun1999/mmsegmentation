@@ -437,7 +437,6 @@ class MixVisionTransformer(BaseModule):
 
     def forward(self, x):
         outs = []
-
         for i, layer in enumerate(self.layers):
             x, hw_shape = layer[0](x)
             for block in layer[1]:

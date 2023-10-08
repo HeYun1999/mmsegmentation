@@ -50,6 +50,8 @@ def weight_reduce_loss(loss,
                        reduction='mean',
                        avg_factor=None) -> torch.Tensor:
     """Apply element-wise weight and reduce loss.
+     weight：每个像素的权重
+     给每个元素增加权重同时降低loss
 
     Args:
         loss (Tensor): Element-wise loss.

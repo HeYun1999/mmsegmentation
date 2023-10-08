@@ -288,7 +288,7 @@ class BaseDecodeHead(BaseModule, metaclass=ABCMeta):
         ]
         return torch.stack(gt_semantic_segs, dim=0)
 
-    def loss_by_feat(self, seg_logits: Tensor,
+    def loss_by_feat(self, seg_logits,
                      batch_data_samples: SampleList) -> dict:
         """Compute segmentation loss.
 
@@ -304,11 +304,23 @@ class BaseDecodeHead(BaseModule, metaclass=ABCMeta):
 
         seg_label = self._stack_batch_gt(batch_data_samples)
         loss = dict()
-        seg_logits = resize(
-            input=seg_logits,
-            size=seg_label.shape[2:],
-            mode='bilinear',
-            align_corners=self.align_corners)
+        if isinstance(seg_logits,list):
+            seg = []
+            for seg_lo in seg_logits:
+                seg_lo = resize(
+                    input=seg_lo,
+                    size=seg_label.shape[2:],
+                    mode='bilinear',
+                    align_corners=self.align_corners)
+                seg.append(seg_lo)
+            seg_logits = seg
+
+        else:
+            seg_logits = resize(
+                input=seg_logits,
+                size=seg_label.shape[2:],
+                mode='bilinear',
+                align_corners=self.align_corners)
         if self.sampler is not None:
             seg_weight = self.sampler.sample(seg_logits, seg_label)
         else:
@@ -332,7 +344,9 @@ class BaseDecodeHead(BaseModule, metaclass=ABCMeta):
                     seg_label,
                     weight=seg_weight,
                     ignore_index=self.ignore_index)
-
+        #用于计算指标的特征图
+        if isinstance(seg_logits,list):
+            seg_logits = seg_logits[1]
         loss['acc_seg'] = accuracy(
             seg_logits, seg_label, ignore_index=self.ignore_index)
         return loss
@@ -349,10 +363,20 @@ class BaseDecodeHead(BaseModule, metaclass=ABCMeta):
         Returns:
             Tensor: Outputs segmentation logits map.
         """
-
-        seg_logits = resize(
-            input=seg_logits,
-            size=batch_img_metas[0]['img_shape'],
-            mode='bilinear',
-            align_corners=self.align_corners)
+        if isinstance(seg_logits,list):
+            seg = []
+            for seg_lo in seg_logits:
+                seg_lo = resize(
+                    input=seg_lo,
+                    size=batch_img_metas[0]['img_shape'],
+                    mode='bilinear',
+                    align_corners=self.align_corners)
+                seg.append(seg_lo)
+            seg_logits = seg
+        else:
+            seg_logits = resize(
+                input=seg_logits,
+                size=batch_img_metas[0]['img_shape'],
+                mode='bilinear',
+                align_corners=self.align_corners)
         return seg_logits

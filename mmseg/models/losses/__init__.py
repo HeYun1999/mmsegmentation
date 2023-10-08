@@ -10,11 +10,12 @@ from .lovasz_loss import LovaszLoss
 from .ohem_cross_entropy_loss import OhemCrossEntropy
 from .tversky_loss import TverskyLoss
 from .utils import reduce_loss, weight_reduce_loss, weighted_loss
-
+from .my_loss import My_CrossEntropyLoss
+from .cross_entropy_lossv1 import CrossEntropyLossV1
 __all__ = [
     'accuracy', 'Accuracy', 'cross_entropy', 'binary_cross_entropy',
     'mask_cross_entropy', 'CrossEntropyLoss', 'reduce_loss',
     'weight_reduce_loss', 'weighted_loss', 'LovaszLoss', 'DiceLoss',
     'FocalLoss', 'TverskyLoss', 'OhemCrossEntropy', 'BoundaryLoss',
-    'HuasdorffDisstanceLoss'
+    'HuasdorffDisstanceLoss','My_CrossEntropyLoss','CrossEntropyLossV1'
 ]

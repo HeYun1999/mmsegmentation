@@ -7,6 +7,7 @@ import torch.nn.functional as F
 
 from mmseg.registry import MODELS
 from .utils import get_class_weight, weight_reduce_loss
+from .my_lovasz_loss import lovasz_softmax,My_LovaszLoss
 
 def cross_entropy(pred,
                   label,
@@ -14,6 +15,7 @@ def cross_entropy(pred,
                   class_weight=None,
                   reduction='mean',
                   avg_factor=None,
+                  #ignore_index=-100,
                   ignore_index=-100,
                   avg_non_ignore=False):
     """cross_entropy. The wrapper function for :func:`F.cross_entropy`
@@ -41,13 +43,33 @@ def cross_entropy(pred,
 
     # class_weight is a manual rescaling weight given to each class.
     # If given, has to be a Tensor of size C element-wise losses
-    loss = F.cross_entropy(
-        pred,
-        label,
-        weight=class_weight,
-        reduction='none',
-        ignore_index=ignore_index)
+    #print(pred)
+    if isinstance(pred, list):
+        pred_decoupling = pred[0]
+        pred_main = pred[1]
+        #label_decoupling=torch.where(label == 5,label, 9)
+        #print(label_decoupling)
+        #label1 = redefine(label)
+        loss = F.cross_entropy(
+            pred_main,
+            label,
+            weight=class_weight,
+            reduction='none',
+            ignore_index=ignore_index)
 
+        lovaszloss = My_LovaszLoss(reduction = 'none',classes= [5])
+        #pred_decoupling = F.softmax(pred_decoupling, dim=1)
+        loss2 = lovaszloss(pred_decoupling,label)
+        #loss2 = lovasz_softmax(pred_decoupling,label,classes=[5])
+    else:
+        loss = F.cross_entropy(
+            pred,
+            label,
+            weight=class_weight,
+            reduction='none',
+            ignore_index=ignore_index)
+
+    #loss = 2* loss1 + 0 * loss2
 
     # apply weights and do the reduction
     # average loss over non-ignored elements
@@ -59,7 +81,8 @@ def cross_entropy(pred,
         weight = weight.float()
     loss = weight_reduce_loss(
         loss, weight=weight, reduction=reduction, avg_factor=avg_factor)
-
+    if isinstance(pred, list):
+        loss = 2 * loss + 0.2 * loss2
     return loss
 
 
@@ -194,7 +217,7 @@ def mask_cross_entropy(pred,
 
 
 @MODELS.register_module()
-class CrossEntropyLoss(nn.Module):
+class My_CrossEntropyLoss(nn.Module):
     """CrossEntropyLoss.
 
     Args:
@@ -257,7 +280,7 @@ class CrossEntropyLoss(nn.Module):
                 weight=None,
                 avg_factor=None,
                 reduction_override=None,
-                ignore_index=-100,
+                ignore_index=255,
                 **kwargs):
         """Forward function."""
         assert reduction_override in (None, 'none', 'mean', 'sum')
@@ -294,5 +317,3 @@ class CrossEntropyLoss(nn.Module):
             str: The name of this loss item.
         """
         return self._loss_name
-
-

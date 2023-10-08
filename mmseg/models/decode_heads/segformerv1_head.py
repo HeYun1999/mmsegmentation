@@ -46,7 +46,7 @@ class SegformerHeadV1(BaseDecodeHead):
             norm_cfg=self.norm_cfg)
 
         self.fusion_conv_main = ConvModule(
-            in_channels=320,
+            in_channels=576,
             out_channels=self.channels,
             kernel_size=1,
             norm_cfg=self.norm_cfg)
@@ -93,16 +93,27 @@ class decoupling(nn.Module):
         self.decoupling_mod = nn.Sequential(
             nn.Conv2d(in_channels, in_channels, 3, 2,padding=1, bias=False),
             nn.BatchNorm2d(in_channels),
-            nn.Upsample(scale_factor=2)
+            nn.ReLU(),
+            nn.Upsample(scale_factor=2),
+            nn.Conv2d(in_channels, in_channels, 3, 1, padding=1, bias=False),
+            nn.BatchNorm2d(in_channels),
             )
         self.convout_mod = nn.ModuleList([
             nn.Sequential(
                 nn.Conv2d(in_channels , out_channels, 3, 1, padding=1, bias=False),
                 nn.BatchNorm2d(out_channels),
+                nn.ReLU(),
+                nn.Conv2d(out_channels, out_channels, 1, 1, padding=0, bias=False),
+                nn.BatchNorm2d(out_channels),
+                nn.ReLU()
             ),
             nn.Sequential(
                 nn.Conv2d(in_channels, out_channels, 3, 1, padding=1, bias=False),
                 nn.BatchNorm2d(out_channels),
+                nn.ReLU(),
+                nn.Conv2d(out_channels, out_channels, 1, 1, padding=0, bias=False),
+                nn.BatchNorm2d(out_channels),
+                nn.ReLU()
             )
             ])
 
@@ -114,7 +125,9 @@ class decoupling(nn.Module):
         for idex in range(len(outs)):
             ou = self.convout_mod[idex](outs[idex])
             out_conv.append(ou)
-        out_add = out_conv[0] + out_conv[1]
+        out_add=torch.cat(out_conv,dim=1)
+
+      #  out_add = out_conv[0] + out_conv[1]
 
         outs = [out_conv[0],out_add]
         return outs#2,256,256,256

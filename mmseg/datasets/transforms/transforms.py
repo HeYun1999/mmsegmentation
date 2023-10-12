@@ -582,6 +582,9 @@ class PhotoMetricDistortion(BaseTransform):
     """Apply photometric distortion to image sequentially, every transformation
     is applied with a probability of 0.5. The position of random contrast is in
     second or second to last.
+    按顺序将光度失真应用于图像，每次变换
+    应用的概率为 0.5。随机对比度的位置在
+    倒数第二或倒数第二。
 
     1. random brightness
     2. random contrast (mode 0)
@@ -1241,11 +1244,10 @@ class RandomMosaic(BaseTransform):
         repr_str += f'seg_pad_val={self.pad_val})'
         return repr_str
 
-
 @TRANSFORMS.register_module()
 class GenerateEdge(BaseTransform):
     """Generate Edge for CE2P approach.
-
+    产生边缘特征图，但不包含，切割出的边缘属于哪一类，且边缘统一用1填充，非边缘部分用0填充
     Edge will be used to calculate loss of
     `CE2P <https://arxiv.org/abs/1809.05996>`_.
 
@@ -1280,11 +1282,11 @@ class GenerateEdge(BaseTransform):
             dict: Result dict with edge mask.
         """
         h, w = results['img_shape']
-        edge = np.zeros((h, w), dtype=np.uint8)
-        seg_map = results['gt_seg_map']
+        edge = np.zeros((h, w), dtype=np.uint8)#产生同等大小的一个数组
+        seg_map = results['gt_seg_map']#seg_map是标签图
 
-        # down
-        edge_down = edge[1:h, :]
+        # down     边缘特征图的下部分处理
+        edge_down = edge[1:h, :]#
         edge_down[(seg_map[1:h, :] != seg_map[:h - 1, :])
                   & (seg_map[1:h, :] != self.ignore_index) &
                   (seg_map[:h - 1, :] != self.ignore_index)] = 1
@@ -1308,7 +1310,9 @@ class GenerateEdge(BaseTransform):
                                            (self.edge_width, self.edge_width))
         edge = cv2.dilate(edge, kernel)
 
+
         results['gt_edge_map'] = edge
+
         results['edge_width'] = self.edge_width
 
         return results

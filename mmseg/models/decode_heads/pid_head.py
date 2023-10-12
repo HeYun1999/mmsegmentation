@@ -12,7 +12,7 @@ from mmseg.models.losses import accuracy
 from mmseg.models.utils import resize
 from mmseg.registry import MODELS
 from mmseg.utils import OptConfigType, SampleList
-
+import numpy as np
 
 class BasePIDHead(BaseModule):
     """Base class for PID head.
@@ -144,8 +144,17 @@ class PIDHead(BaseDecodeHead):
         gt_edge_segs = [
             data_sample.gt_edge_map.data for data_sample in batch_data_samples
         ]
+        '''
+        a = gt_semantic_segs[0].cpu()
+        b =  gt_edge_segs[0].cpu()
+
+        c = torch.where(a==b,255,a)
+        a = np.asarray(a)
+        b = np.asarray(b)
+        c = np.asarray(c)
+        '''
         gt_sem_segs = torch.stack(gt_semantic_segs, dim=0)
-        gt_edge_segs = torch.stack(gt_edge_segs, dim=0)
+        gt_edge_segs = torch.stack(gt_edge_segs, dim=0)#torch.stack新建一个dim = 0维度，并在这个维度上拼接
         return gt_sem_segs, gt_edge_segs
 
     def loss_by_feat(self, seg_logits: Tuple[Tensor],

@@ -41,11 +41,7 @@ class DecouplingFusionHead(BaseDecodeHead):
         self.c1_channels =c1_channels
 
         self.conv = nn.Sequential(
-                nn.Conv2d(1472, 512, 3, 1, 1),
-                nn.BatchNorm2d(512),
-                nn.ReLU(),
-                #nn.Upsample(scale_factor=2),
-                nn.Conv2d(512, 256, 3, 1, 1),
+                nn.Conv2d(1472, 256, 3, 1, 1),
                 nn.BatchNorm2d(256),
                 nn.ReLU()
         )

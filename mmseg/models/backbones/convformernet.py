@@ -51,55 +51,44 @@ class fusion_decoupe(BaseModule):
         ])
         self.decoupe_resnet = nn.ModuleList([
             nn.Sequential(
-                nn.Conv2d(96, 96, 3, 2, 1),
-                nn.BatchNorm2d(96),
-                nn.ReLU(),
-                nn.Upsample(scale_factor=2),
-                nn.Conv2d(96, 64, 1),
+                nn.Conv2d(96, 64, 3, 2, 1),
                 nn.BatchNorm2d(64),
-            ),
-            nn.Sequential(
-                nn.Conv2d(192, 192, 3, 2, 1),
-                nn.BatchNorm2d(192),
                 nn.ReLU(),
                 nn.Upsample(scale_factor=2),
-                nn.Conv2d(192, 128, 1),
+            ),
+            nn.Sequential(
+                nn.Conv2d(192, 128, 3, 2, 1),
                 nn.BatchNorm2d(128),
-            ),
-            nn.Sequential(
-                nn.Conv2d(416, 416, 3, 2, 1),
-                nn.BatchNorm2d(416),
                 nn.ReLU(),
                 nn.Upsample(scale_factor=2),
-                nn.Conv2d(416, 256, 1),
+            ),
+            nn.Sequential(
+                nn.Conv2d(416, 256, 3, 2, 1),
                 nn.BatchNorm2d(256),
+                nn.ReLU(),
+                nn.Upsample(scale_factor=2),
             )
         ])
 
         self.decoupe_trans = nn.ModuleList([
             nn.Sequential(
-                nn.Conv2d(96, 96, 3, 2, 1),
-                nn.BatchNorm2d(96),
-                nn.ReLU(),
-                nn.Upsample(scale_factor=2),
-                nn.Conv2d(96, 32, 1),
+                nn.Conv2d(96, 32, 3, 2, 1),
                 nn.BatchNorm2d(32),
-            ),
-            nn.Sequential(
-                nn.Conv2d(192, 192, 3, 2, 1),
-                nn.BatchNorm2d(192),
                 nn.ReLU(),
                 nn.Upsample(scale_factor=2),
-                nn.Conv2d(192, 64, 1),
+            ),
+            nn.Sequential(
+                nn.Conv2d(192, 64, 3, 2, 1),
                 nn.BatchNorm2d(64),
-            ),
-            nn.Sequential(
-                nn.Conv2d(416, 416, 3, 2, 1),
-                nn.BatchNorm2d(416),
                 nn.ReLU(),
                 nn.Upsample(scale_factor=2),
-                nn.Conv2d(416, 160, 1),
+            ),
+            nn.Sequential(
+                nn.Conv2d(416, 160, 3, 2, 1),
                 nn.BatchNorm2d(160),
+                nn.ReLU(),
+                nn.Upsample(scale_factor=2),
+
             )
         ])
 

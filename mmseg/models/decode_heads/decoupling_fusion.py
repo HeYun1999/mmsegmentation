@@ -103,31 +103,19 @@ class Fusion(BaseModule):
 
         self.decoupling = nn.ModuleList([
             nn.Sequential(
-                nn.Conv2d(in_channels, in_channels, 3, 2, 1),
-                nn.BatchNorm2d(in_channels),
-                nn.ReLU(),
-                nn.Upsample(scale_factor=2),
                 nn.Conv2d(in_channels, out_channels, 3, 2, 1),
                 nn.BatchNorm2d(out_channels),
                 nn.Upsample(scale_factor=2),
                 nn.ReLU()),
 
             nn.Sequential(
-                nn.Conv2d(in_channels, in_channels, 3, 2, 1),
-                nn.BatchNorm2d(in_channels),
-                nn.ReLU(),
-                nn.Upsample(scale_factor=2),
                 nn.Conv2d(in_channels, out_channels, 3, 2, 1),
                 nn.BatchNorm2d(out_channels),
                 nn.Upsample(scale_factor=2),
                 nn.ReLU()),
 
             nn.Sequential(
-                nn.Conv2d(out_channels*2, out_channels*2, 3, 2, 1),
-                nn.BatchNorm2d(out_channels*2),
-                nn.ReLU(),
-                nn.Upsample(scale_factor=2),
-                nn.Conv2d(out_channels*2, out_channels, 3, 2, 1),
+                nn.Conv2d(out_channels*5, out_channels, 3, 2, 1),
                 nn.BatchNorm2d(out_channels),
                 nn.Upsample(scale_factor=2),
                 nn.ReLU())
@@ -139,14 +127,12 @@ class Fusion(BaseModule):
                 ou = self.decoupling[i](edge_main[i])
                 edge_main_all.append(ou)
 
-            '''
             ou = edge_main_all[0] + edge_main_all[1]
-            ou = nn.functional.sigmoid(ou)
             ou = torch.cat((ou, edge_main_all[0]), dim=1)
             ou = torch.cat((ou, edge_main_all[1]), dim=1)
             ou = torch.cat((ou, x), dim=1)
-            '''
-            ou = torch.cat((edge_main_all[0],edge_main_all[1]),dim=1)
+
+            #ou = torch.cat((edge_main_all[0],edge_main_all[1]),dim=1)
             ou = self.decoupling[2](ou)
             edge_main_all.append(ou)
         return edge_main_all

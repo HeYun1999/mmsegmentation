@@ -37,12 +37,13 @@ class MultiClassDiceLoss(nn.Module):
             input tesor of shape = (N, C, H, W)
             target tensor of shape = (N, H, W)
         """
+        #input = F.sigmoid(input)
         # 先将 target 进行 one-hot 处理，转换为 (N, C, H, W)
         target_mask= target != self.ignore_index
         target = target*target_mask
         nclass = input.shape[1]
         #target= target.cpu()
-        target = nn.functional.one_hot(target.long(), nclass)
+        target = nn.functional.one_hot(target, nclass)
         target = target.permute(0,3,1,2)
         assert input.shape == target.shape, "predict & target shape do not match"
 

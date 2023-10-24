@@ -39,6 +39,7 @@ class MultiClassBoundaryLoss_old(nn.Module):
         Returns:
             Tensor: Loss tensor.
         """
+        bd_pre = F.sigmoid(bd_pre)
         log_p = F.softmax(bd_pre,dim=1)
         log_p = log_p.permute(0, 2, 3, 1).contiguous().view(1, -1)#展开成1*n的数据
         target_t = bd_gt.view(1, -1).float()#展开成1*n的数据
@@ -70,13 +71,14 @@ class MultiClassBoundaryLoss(nn.Module):
     """
 
     def __init__(self, theta0=3, theta=5,loss_weight: float = 1.0,
-                 loss_name: str = 'loss_boundary_multiclass'):
+                 loss_name: str = 'loss_boundary_multiclass',ignore_index = 255):
         super().__init__()
 
         self.theta0 = theta0
         self.theta = theta
         self.loss_weight = loss_weight
         self.loss_name1 = loss_name
+        self.ignore_index = ignore_index
 
     def crop(self, w, h, target):
         nt, ht, wt = target.size()
@@ -91,6 +93,7 @@ class MultiClassBoundaryLoss(nn.Module):
 
         ymask = torch.FloatTensor(size).zero_()
         new_target = torch.LongTensor(n, 1, h, w)
+
         if target.is_cuda:
             ymask = ymask.cuda(target.get_device())
             new_target = new_target.cuda(target.get_device())
@@ -111,7 +114,8 @@ class MultiClassBoundaryLoss(nn.Module):
             - boundary loss, averaged over mini-bathc
         """
         gt = torch.squeeze(gt)
-
+        target_mask= gt != self.ignore_index
+        gt = gt*target_mask
         n, c, h, w = pred.shape
         log_p = F.log_softmax(pred, dim=1)
 

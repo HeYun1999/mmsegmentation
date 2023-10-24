@@ -37,7 +37,7 @@ model = dict(
         drop_path_rate=0.1,
 
         resnet_name='ResNetV1c',
-        resnet_depth=50,
+        resnet_depth=18,
         resnet_num_stages=4,
         resnet_out_indices=(0, 1, 2, 3),
         resnet_dilations=(1, 1, 2, 4),
@@ -52,13 +52,10 @@ model = dict(
         channels=64,
         num_classes=6,
         loss_decode=[
-
-            dict(
-                type='MultiClassDiceLoss',
+            dict(type='MultiClassDiceLoss',
                 loss_weight=1.0),
             dict(type='MultiClassBoundaryLoss', loss_weight=2.0),
-            dict(
-                type='CrossEntropyLoss',
+            dict(type='CrossEntropyLoss',
                 use_sigmoid=False,
                 loss_weight=10.0),
         ]),

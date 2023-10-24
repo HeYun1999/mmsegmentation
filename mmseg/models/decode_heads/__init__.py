@@ -36,6 +36,9 @@ from .uper_head import UPerHead
 from .segformer_decoupling_head import Segformer_Decoupling_Head
 from .segformerv1_head import SegformerHeadV1
 from .transresnet_head import TransResnetHead
+from .depag_head import DePagHead
+from .decouping_fusion_head import DecouplingFusionHead
+from .seg_head import SegHead
 __all__ = [
     'FCNHead', 'PSPHead', 'ASPPHead', 'PSAHead', 'NLHead', 'GCHead', 'CCHead',
     'UPerHead', 'DepthwiseSeparableASPPHead', 'ANNHead', 'DAHead', 'OCRHead',
@@ -45,5 +48,5 @@ __all__ = [
     'SegformerHead', 'ISAHead', 'STDCHead', 'IterativeDecodeHead',
     'KernelUpdateHead', 'KernelUpdator', 'MaskFormerHead', 'Mask2FormerHead',
     'LightHamHead', 'PIDHead', 'DDRHead','Segformer_Decoupling_Head','SegformerHeadV1',
-    'TransResnetHead'
+    'TransResnetHead','DePagHead','DecouplingFusionHead','SegHead'
 ]

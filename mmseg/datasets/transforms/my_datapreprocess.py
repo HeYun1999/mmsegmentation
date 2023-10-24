@@ -102,8 +102,8 @@ def generate_edge_main(original_labels):
     processed_labels = conv(labels_tensor)
 
     # 将相同的位置设置为-1
-    label_edge = torch.where(processed_labels == 0, 0, original_labels_clone)
-    label_main = torch.where(processed_labels != 0, 0, original_labels_clone)
+    label_edge = torch.where(processed_labels == 0, 255, original_labels_clone)
+    label_main = torch.where(processed_labels != 0, 255, original_labels_clone)
     label_edge = label_edge.squeeze(1).to(torch.int64).cuda()
     label_main = label_main.squeeze(1).to(torch.int64).cuda()
     return label_edge,label_main

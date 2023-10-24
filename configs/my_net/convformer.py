@@ -5,7 +5,7 @@ _base_ = [
 
 # The class_weight is borrowed from https://github.com/openseg-group/OCNet.pytorch/issues/14 # noqa
 # Licensed under the MIT License
-checkpoint_file = 'https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/pidnet/pidnet-s_imagenet1k_20230306-715e6273.pth'  # noqa
+#checkpoint_file = 'https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/pidnet/pidnet-s_imagenet1k_20230306-715e6273.pth'  # noqa
 crop_size = (512, 512)
 data_preprocessor = dict(
     type='SegDataPreProcessor',
@@ -16,44 +16,48 @@ data_preprocessor = dict(
     seg_pad_val=255,
     size=crop_size)
 norm_cfg = dict(type='SyncBN', requires_grad=True)
+
 model = dict(
     type='EncoderDecoder',
     data_preprocessor=data_preprocessor,
     backbone=dict(
-        type='PIDNet',
+        type='ConvFormerNet',
         in_channels=3,
-        channels=32,
-        ppm_channels=96,
-        num_stem_blocks=2,
-        num_branch_blocks=3,
-        align_corners=False,
-        norm_cfg=norm_cfg,
-        act_cfg=dict(type='ReLU', inplace=True),
-        init_cfg=dict(type='Pretrained', checkpoint=checkpoint_file)),
+        embed_dims=32,
+        num_stages=4,
+        num_layers=[2, 2, 2, 2],
+        num_heads=[1, 2, 5, 8],
+        patch_sizes=[7, 3, 3, 3],
+        sr_ratios=[8, 4, 2, 1],
+        out_indices=(0, 1, 2, 3),
+        mlp_ratio=4,
+        qkv_bias=True,
+        drop_rate=0.0,
+        attn_drop_rate=0.0,
+        drop_path_rate=0.1,
+
+        resnet_name='ResNetV1c',
+        resnet_depth=18,
+        resnet_num_stages=4,
+        resnet_out_indices=(0, 1, 2, 3),
+        resnet_dilations=(1, 1, 2, 4),
+        resnet_strides=(1, 2, 1, 1),
+        resnet_norm_cfg=norm_cfg,
+        resnet_norm_eval=False,
+        resnet_style='pytorch',
+        resnet_contract_dilation=True),
     decode_head=dict(
-        type='PIDHead',
-        in_channels=128,
+        type='DecouplingFusionHead',
+        in_channels=512,
+        c1_channels=0,
         channels=128,
         num_classes=6,
-        norm_cfg=norm_cfg,
-        act_cfg=dict(type='ReLU', inplace=True),
-        align_corners=True,
+        align_corners=False,
+
         loss_decode=[
-            dict(
-                type='CrossEntropyLoss',
-                use_sigmoid=False,
-                loss_weight=0.4),
-            dict(
-                type='OhemCrossEntropy',
-                thres=0.9,
-                min_kept=131072,
-                loss_weight=1.0),
-            dict(type='BoundaryLoss', loss_weight=20.0),
-            dict(
-                type='OhemCrossEntropy',
-                thres=0.9,
-                min_kept=131072,
-                loss_weight=1.0)
+            dict(type='MultiDiceLoss', loss_weight=1.0),
+            dict(type='FocalLoss', loss_weight=2.0),
+            dict(type='CrossEntropyLoss', use_sigmoid=False, loss_weight=10.0),
         ]),
     train_cfg=dict(),
     test_cfg=dict(mode='whole'))
@@ -61,20 +65,14 @@ model = dict(
 train_pipeline = [
     dict(type='LoadImageFromFile'),
     dict(type='LoadAnnotations'),
-    dict(
-        type='RandomResize',
-        scale=(512, 512),
-        ratio_range=(0.5, 2.0),
-        keep_ratio=True),
     dict(type='RandomCrop', crop_size=crop_size, cat_max_ratio=0.75),
     dict(type='RandomFlip', prob=0.5),
     dict(type='PhotoMetricDistortion'),
-    dict(type='GenerateEdge', edge_width=4),#这一句话产生边缘标签
     dict(type='PackSegInputs')
 ]
-train_dataloader = dict(batch_size=6, dataset=dict(pipeline=train_pipeline))
+train_dataloader = dict(batch_size=3, dataset=dict(pipeline=train_pipeline))
 
-iters = 120000
+iters = 80000
 # optimizer
 optimizer = dict(type='SGD', lr=0.01, momentum=0.9, weight_decay=0.0005)
 optim_wrapper = dict(type='OptimWrapper', optimizer=optimizer, clip_grad=None)
@@ -90,7 +88,7 @@ param_scheduler = [
 ]
 # training schedule for 120k
 train_cfg = dict(
-    type='IterBasedTrainLoop', max_iters=iters, val_interval=50)
+    type='IterBasedTrainLoop', max_iters=iters, val_interval=400)
 val_cfg = dict(type='ValLoop')
 test_cfg = dict(type='TestLoop')
 default_hooks = dict(

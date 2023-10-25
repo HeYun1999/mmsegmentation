@@ -51,52 +51,48 @@ class fusion_decoupe(BaseModule):
         ])
         self.decoupe_resnet = nn.ModuleList([
             nn.Sequential(
-                nn.Conv2d(96, 64, 3, 2, 1),
+                nn.Conv2d(96, 64, 1, 1, 0),
                 nn.BatchNorm2d(64),
                 nn.ReLU(),
-                nn.Upsample(scale_factor=2),
             ),
             nn.Sequential(
-                nn.Conv2d(192, 128, 3, 2, 1),
+                nn.Conv2d(192, 128, 1, 1, 0),
                 nn.BatchNorm2d(128),
                 nn.ReLU(),
-                nn.Upsample(scale_factor=2),
             ),
             nn.Sequential(
-                nn.Conv2d(416, 256, 3, 2, 1),
+                nn.Conv2d(416, 256, 1, 1, 0),
                 nn.BatchNorm2d(256),
                 nn.ReLU(),
-                nn.Upsample(scale_factor=2),
             )
         ])
 
         self.decoupe_trans = nn.ModuleList([
             nn.Sequential(
-                nn.Conv2d(96, 32, 3, 2, 1),
+                nn.Conv2d(96, 32, 1, 1, 0),
                 nn.BatchNorm2d(32),
                 nn.ReLU(),
-                nn.Upsample(scale_factor=2),
             ),
             nn.Sequential(
-                nn.Conv2d(192, 64, 3, 2, 1),
+                nn.Conv2d(192, 64, 1, 1, 0),
                 nn.BatchNorm2d(64),
                 nn.ReLU(),
-                nn.Upsample(scale_factor=2),
             ),
             nn.Sequential(
-                nn.Conv2d(416, 160, 3, 2, 1),
+                nn.Conv2d(416, 160, 1, 1, 0),
                 nn.BatchNorm2d(160),
                 nn.ReLU(),
-                nn.Upsample(scale_factor=2),
 
             )
         ])
-
+        self.ECAAttention = ECAAttention()
 
 
     def forward(self,resnet_input,trans_input,i):
         trans_input = self.resize_trans[i](trans_input)
         cat = torch.cat((resnet_input,trans_input),dim=1)
+        #cat_maxpooled = nn.functional.max_pool2d(cat, 2)
+        cat = self.ECAAttention(cat)
         if i !=3:
             resnet_output = self.decoupe_resnet[i](cat)
             trans_output = self.decoupe_trans[i](cat)
@@ -106,7 +102,35 @@ class fusion_decoupe(BaseModule):
 
         return resnet_output,trans_output,cat
 
+class ECAAttention(nn.Module):
 
+    def __init__(self, kernel_size=3):
+        super().__init__()
+        self.gap=nn.AdaptiveAvgPool2d(1)
+        self.conv=nn.Conv1d(1,1,kernel_size=kernel_size,padding=(kernel_size-1)//2)
+        self.sigmoid=nn.Sigmoid()
+
+    def init_weights(self):
+        for m in self.modules():
+            if isinstance(m, nn.Conv2d):
+                init.kaiming_normal_(m.weight, mode='fan_out')
+                if m.bias is not None:
+                    init.constant_(m.bias, 0)
+            elif isinstance(m, nn.BatchNorm2d):
+                init.constant_(m.weight, 1)
+                init.constant_(m.bias, 0)
+            elif isinstance(m, nn.Linear):
+                init.normal_(m.weight, std=0.001)
+                if m.bias is not None:
+                    init.constant_(m.bias, 0)
+
+    def forward(self, x):
+        y=self.gap(x) #bs,c,1,1
+        y=y.squeeze(-1).permute(0,2,1) #bs,1,c
+        y=self.conv(y) #bs,1,c
+        y=self.sigmoid(y) #bs,1,c
+        y=y.permute(0,2,1).unsqueeze(-1) #bs,c,1,1
+        return x*y.expand_as(x)
 @MODELS.register_module()
 class ConvFormerNet(BaseModule):
     """The backbone of Segformer.

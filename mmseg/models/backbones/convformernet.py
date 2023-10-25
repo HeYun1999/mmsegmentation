@@ -92,6 +92,7 @@ class fusion_decoupe(BaseModule):
         trans_input = self.resize_trans[i](trans_input)
         cat = torch.cat((resnet_input,trans_input),dim=1)
         #cat_maxpooled = nn.functional.max_pool2d(cat, 2)
+
         cat = self.ECAAttention(cat)
         if i !=3:
             resnet_output = self.decoupe_resnet[i](cat)

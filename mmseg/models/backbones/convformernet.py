@@ -52,36 +52,25 @@ class fusion_decoupe(BaseModule):
         self.decoupe_resnet = nn.ModuleList([
             nn.Sequential(
                 nn.Conv2d(96, 64, 1, 1, 0),
-                nn.BatchNorm2d(64),
-                nn.ReLU(),
             ),
             nn.Sequential(
                 nn.Conv2d(192, 128, 1, 1, 0),
-                nn.BatchNorm2d(128),
-                nn.ReLU(),
+
             ),
             nn.Sequential(
                 nn.Conv2d(416, 256, 1, 1, 0),
-                nn.BatchNorm2d(256),
-                nn.ReLU(),
             )
         ])
 
         self.decoupe_trans = nn.ModuleList([
             nn.Sequential(
                 nn.Conv2d(96, 32, 1, 1, 0),
-                nn.BatchNorm2d(32),
-                nn.ReLU(),
             ),
             nn.Sequential(
                 nn.Conv2d(192, 64, 1, 1, 0),
-                nn.BatchNorm2d(64),
-                nn.ReLU(),
             ),
             nn.Sequential(
                 nn.Conv2d(416, 160, 1, 1, 0),
-                nn.BatchNorm2d(160),
-                nn.ReLU(),
 
             )
         ])

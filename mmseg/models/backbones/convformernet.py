@@ -44,33 +44,44 @@ class fusion_decoupe(BaseModule):
         super().__init__()
 
         self.resize_trans = nn.ModuleList([
-            nn.Sequential(),
-            nn.Sequential(),
-            nn.Upsample(scale_factor=2),
-            nn.Upsample(scale_factor=2)
-        ])
-        self.decoupe_resnet = nn.ModuleList([
             nn.Sequential(
-                nn.Conv2d(96, 64, 1, 1, 0),
+                nn.Conv2d(32, 64, 1, 1, 0),
             ),
             nn.Sequential(
-                nn.Conv2d(192, 128, 1, 1, 0),
+                nn.Conv2d(64, 128, 1, 1, 0),
+            ),
+            nn.Sequential(
+                nn.Upsample(scale_factor=2),
+                nn.Conv2d(160, 256, 1, 1, 0),
 
             ),
             nn.Sequential(
-                nn.Conv2d(416, 256, 1, 1, 0),
+                nn.Upsample(scale_factor=2),
+                nn.Conv2d(256, 512, 1, 1, 0),
+            ),
+        ])
+        self.decoupe_resnet = nn.ModuleList([
+            nn.Sequential(
+                nn.Conv2d(192, 64, 1, 1, 0),
+            ),
+            nn.Sequential(
+                nn.Conv2d(384, 128, 1, 1, 0),
+
+            ),
+            nn.Sequential(
+                nn.Conv2d(768, 256, 1, 1, 0),
             )
         ])
 
         self.decoupe_trans = nn.ModuleList([
             nn.Sequential(
-                nn.Conv2d(96, 32, 1, 1, 0),
+                nn.Conv2d(192, 32, 1, 1, 0),
             ),
             nn.Sequential(
-                nn.Conv2d(192, 64, 1, 1, 0),
+                nn.Conv2d(384, 64, 1, 1, 0),
             ),
             nn.Sequential(
-                nn.Conv2d(416, 160, 1, 1, 0),
+                nn.Conv2d(768, 160, 1, 1, 0),
 
             )
         ])
@@ -79,7 +90,8 @@ class fusion_decoupe(BaseModule):
 
     def forward(self,resnet_input,trans_input,i):
         trans_input = self.resize_trans[i](trans_input)
-        cat = torch.cat((resnet_input,trans_input),dim=1)
+        add = trans_input + resnet_input
+        cat = torch.cat((resnet_input,trans_input,add),dim=1)
         #cat_maxpooled = nn.functional.max_pool2d(cat, 2)
 
         cat = self.ECAAttention(cat)
